@@ -57,3 +57,14 @@ class MoexMethods():
         from_time = datetime.utcnow() - timedelta(days=15)
         response_moex = (requests.get(url_moex.format(currency_choise, from_time, till_time)))
         return response_moex
+    
+def is_valid_date(date_string):
+    try:
+        # Parse the date using the specified format
+        parsed_date = datetime.strptime(date_string, "%d.%m.%Y")
+        min_date = datetime(1993, 10, 1)
+        max_date = datetime.now() + timedelta(days=5)
+        return min_date <= parsed_date <= max_date
+    except ValueError:
+        # The date string does not match the specified format
+        return False
