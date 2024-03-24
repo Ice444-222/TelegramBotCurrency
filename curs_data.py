@@ -57,7 +57,7 @@ class MoexMethods():
         from_time = datetime.utcnow() - timedelta(days=15)
         response_moex = (requests.get(url_moex.format(currency_choise, from_time, till_time)))
         return response_moex
-    
+     
 def is_valid_date(date_string):
     try:
         # Parse the date using the specified format
