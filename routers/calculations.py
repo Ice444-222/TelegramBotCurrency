@@ -33,3 +33,23 @@ async def handle_curs_date_response(message, state):
 async def handle_curs_date_response(message, state):
     await state.set_state(st.ClientState.RUB_TO_VAL)
     await message.answer(text="Введите количество рублей", reply_markup=base_keyboard.curs_calculator_kb(st.ClientState.RUB_TO_VAL))
+
+@router.message(or_f(st.ClientState.VAL_TO_RUB, st.ClientState.RUB_TO_VAL))
+async def handle_curs_date_response(message, state):
+    current_state = await state.get_state()
+    valute_data = await state.get_data()
+    value_cb = valute_data['VALUE_CB']
+    symbol = valute_data['SYMBOL']
+    text_without_commas = message.text.replace(',', '.')
+    if text_without_commas.isdigit() or text_without_commas.replace('.', '', 1).isdigit():
+        if current_state == st.ClientState.VAL_TO_RUB:
+            value = float(text_without_commas) * value_cb
+            main_symbol = symbol
+            second_symbol = '₽'
+        else:
+            value = float(text_without_commas) / value_cb
+            main_symbol = '₽'
+            second_symbol = symbol   
+    else:
+        value = "Введите пожалуйста только целое или дробное число."
+    await message.answer(text=f"{text_without_commas}{main_symbol} это {round(value,2)}{second_symbol}", reply_markup=base_keyboard.curs_calculator_kb(current_state))

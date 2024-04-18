@@ -30,3 +30,7 @@ async def handle_curs_all(message):
 @router.message(Command("curs"))
 async def handle_curs_choice(message):
     await message.answer(text='Выбирайте!', reply_markup=base_keyboard.curs_choice_kb())
+
+@router.message(F.text == 'Назад к выбору валюты')
+async def handle_curs_date_response(message):
+    await message.answer(text="Отправляю назад.", reply_markup=base_keyboard.curs_choice_kb())

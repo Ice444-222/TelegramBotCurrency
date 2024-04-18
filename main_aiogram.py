@@ -18,28 +18,14 @@ from aiogram.filters import and_f, or_f
 from routers import router as main_router
 import keyboards.basic_keyboards as base_keyboard
 import variables.constans as const
+import variables.states as st
+import functions.data_parse as dp
 
 locale.setlocale(locale.LC_TIME, 'ru_RU')
 storage = MemoryStorage()
 bot = Bot(token=configs.TOKEN)
 dp = Dispatcher()
 dp.include_router(main_router)
-
-
-
-class ClientState(StatesGroup):
-    VALUTE = State()
-    MAIN_MENU = State()
-    DATE = State()
-    CALC = State()
-    RUB_TO_VAL = State()
-    VAL_TO_RUB = State()
-    
-
-
-
-
-
 
 
 @dp.message(lambda message: any(re.search(r'\b{}\b'.format(re.escape(message.text.casefold())), data['Name'].casefold()) for data in const.CURS_DATA.values()))
@@ -55,7 +41,7 @@ async def handle_currency_choice(message: types.Message, state: FSMContext):
         """
         if re.search(r'\b{}\b'.format(re.escape(message.text.casefold())), data['Name'].casefold()) or message.text.split()[0] in data['Emoji']:
             currency_choice = currency_code
-            await state.set_state(ClientState.VALUTE)
+            await state.set_state(st.ClientState.VALUTE)
             await state.update_data(VALUTE=currency_choice)
             await state.update_data(SYMBOL=data['Symbol'])
             try:
@@ -106,77 +92,10 @@ async def handle_currency_choice(message: types.Message, state: FSMContext):
                     moex_message = 'Не удалось получить данные по курсу Московской биржи, попробуйте сделать запрос позже (бывает достаточно отправить ещё один запрос)'
             else:
                 moex_message = 'Валюта не продаётся на Московской Бирже.'
+    answer = f"{moex_message}\n\n{currency_choice_text}"
 
-    await message.answer(text=f"{moex_message}\n\n{currency_choice_text}", reply_markup=base_keyboard.curs_choice_result_kb(ClientState.VALUTE))
+    await message.answer(text=answer, reply_markup=base_keyboard.curs_choice_result_kb(st.ClientState.VALUTE))
 
-
-@dp.message(and_f(or_f(ClientState.VALUTE, ClientState.CALC), F.text == 'Показать курс на конкретную дату'))
-async def handle_curs_date_response(message, state):
-    await state.set_state(ClientState.DATE)
-    await message.answer(text='Пожалуйста, введите требуемую дату в следующем формате: дд.мм.гггг', reply_markup=base_keyboard.curs_choice_result_kb(ClientState.DATE))
-
-
-@dp.message(F.text == 'Назад к выбору валюты')
-async def handle_curs_date_response(message):
-    await message.answer(text="Отправляю назад.", reply_markup=base_keyboard.curs_choice_kb())
-
-
-
-
-
-@dp.message(ClientState.DATE,)
-async def handle_curs_date_response(message, state):
-    user_input = message.text
-    if is_valid_date(user_input):
-        user_input_slash = user_input.replace('.', '/')
-        valute_data = await state.get_data()
-        user_choice = valute_data['VALUTE']
-        value_cb = valute_data['VALUE_CB']
-        url_find = ("./Valute[CharCode='{}']/VunitRate").format(user_choice)
-        url_request = (const.URL_CB_DATE).format(user_input_slash)
-        await state.update_data(selected_date=user_input_slash)
-        try:
-            response_cb_all = float(ET.fromstring(requests.get(url_request).text).find(url_find).text.replace(',', '.'))
-            difference = int(round(((value_cb*1000)/(response_cb_all*1000)-1)*100, 0))
-            difference_text = "C данной даты курс {} на {}%{}"
-            if difference > 0:
-                result = 'увеличился'
-                smile = "💹"
-            elif difference < 0:
-                result = 'уменьшился'
-                difference *= -1
-                smile = "🔻"
-            else:
-                difference_text = 'курс не изменился'
-            await message.answer(f"Курс на {user_input}: {response_cb_all}\n{difference_text.format(result,difference,smile)}")
-        except Exception:
-            await message.answer("Нету данных ЦБ РФ на данную дату, возможно на тот момент ЦБ РФ ещё указывал курс для данной валюты. Попробуйте указать более позднюю дату.")
-    else:
-        await message.answer("Извините, формат некорректен. Введите дату в формате дд.мм.гггг.\nНапример 05.12.2006")
-
-
-
-
-
-@dp.message(or_f(ClientState.VAL_TO_RUB, ClientState.RUB_TO_VAL))
-async def handle_curs_date_response(message, state):
-    current_state = await state.get_state()
-    valute_data = await state.get_data()
-    value_cb = valute_data['VALUE_CB']
-    symbol = valute_data['SYMBOL']
-    text_without_commas = message.text.replace(',', '.')
-    if text_without_commas.isdigit() or text_without_commas.replace('.', '', 1).isdigit():
-        if current_state == ClientState.VAL_TO_RUB:
-            value = float(text_without_commas) * value_cb
-            main_symbol = symbol
-            second_symbol = '₽'
-        else:
-            value = float(text_without_commas) / value_cb
-            main_symbol = '₽'
-            second_symbol = symbol   
-    else:
-        value = "Введите пожалуйста только целое или дробное число."
-    await message.answer(text=f"{text_without_commas}{main_symbol} это {round(value,2)}{second_symbol}", reply_markup=base_keyboard.curs_calculator_kb(current_state))
 
 
 async def main():
