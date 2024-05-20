@@ -1,5 +1,5 @@
 from aiogram import types
-from curs_data import CURS_DATA
+from variables.constans import CURS_DATA
 from aiogram.fsm.state import State, StatesGroup
 
 class ClientState(StatesGroup):
