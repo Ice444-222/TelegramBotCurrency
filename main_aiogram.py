@@ -21,7 +21,8 @@ dp.include_router(main_router)
 @dp.message(
     lambda message: any(
         re.search(
-            r'\b{}\b'.format(re.escape(message.text.casefold())), data['Name'].casefold()
+            r'\b{}\b'.format(re.escape(message.text.casefold())),
+            data['Name'].casefold()
         ) for data in const.CURS_DATA.values()
     )
 )
